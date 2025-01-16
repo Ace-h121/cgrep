@@ -13,10 +13,13 @@ pub fn main() !void {
         try std.io.getStdErr().writer().print("Error: do not have enough Args, please see help command\n", .{});
         return;
     }
+
+    //TODO: Rename this!
     const path_null_terminated: [*:0]u8 = std.os.argv[1];
 
     var count: u32 = 0;
 
+    //If you are only given a pattern, read from std in
     if (std.os.argv.len <= 2) {
         var reader = stdin.reader();
         const pat: [:0]const u8 = std.mem.span(path_null_terminated);
