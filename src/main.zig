@@ -61,8 +61,7 @@ pub fn badCharHeuristic(str: []const u8, size: u64, badchar: *[NO_OF_CHARS]u16) 
     }
 }
 
-//Dude, this algorith still hurts my brain, heres what I can gather
-//
+//Dude, this algorith still hurts my brain, I used it as its the algorithm that grep uses for pattern matching. It seems to look for groups of characters in arrays, or string. Splits the string up, looks to see if the first char matches and if it does it keeps going, if not, moves on.
 pub fn search(str: []const u8, pat: []const u8, count: u32) !void {
     const patLen: i64 = @intCast(pat.len);
     const strLen: i64 = @intCast(str.len);
@@ -70,22 +69,20 @@ pub fn search(str: []const u8, pat: []const u8, count: u32) !void {
     var badchar: [NO_OF_CHARS]u16 = undefined;
     badCharHeuristic(pat, @intCast(patLen), &badchar);
 
-    var s: i64 = 0;
+    var shift: i64 = 0;
 
-    while (s <= (strLen - patLen)) {
-        var j: i64 = patLen - 1;
-        var idx: i64 = @intCast(j);
-        //reducing index of j of pattern while character of pattern and text are matching at this shift s
-        while (idx >= 0 and pat[@intCast(idx)] == str[@as(u64, @intCast(s + idx))]) {
+    while (shift <= (strLen - patLen)) {
+        var idx: i64 = patLen - 1;
+        //reducing index of pattern while character of pattern and text are matching at this shift s
+        while (idx >= 0 and pat[@intCast(idx)] == str[@as(u64, @intCast(shift + idx))]) {
             idx -= 1;
         }
 
         if (idx < 0) {
             try stdout.writer().print("{d}:{s} \n", .{ count, str });
-            s += if (s + patLen < strLen) patLen - badchar[str[@as(u64, @intCast(s + patLen))]] else 1;
+            shift += if (shift + patLen < strLen) patLen - badchar[str[@as(u64, @intCast(shift + patLen))]] else 1;
         } else {
-            j = @intCast(idx);
-            s += @intCast(@max(1, (idx) - badchar[str[@as(u64, @intCast(s + j))]]));
+            shift += @intCast(@max(1, (idx) - badchar[str[@as(u64, @intCast(shift + idx))]]));
         }
     }
 }
