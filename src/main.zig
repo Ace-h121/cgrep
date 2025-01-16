@@ -24,11 +24,14 @@ pub fn main() !void {
         var reader = stdin.reader();
         const pat: [:0]const u8 = std.mem.span(path_null_terminated);
         var buf: [1000]u8 = undefined;
+        //Print everyline that contains the pattern, pass the count so the line number is there as well
         while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
             count += 1;
             try search(line, pat, count);
         }
+        // If passed both the file and pattern to match by, open the file and search for the pattern
     } else {
+        //TODO: Rename this too
         const pat_null_terminated: [*:0]u8 = std.os.argv[2];
         const path: [:0]const u8 = std.mem.span(path_null_terminated);
         const pat: [:0]const u8 = std.mem.span(pat_null_terminated);
@@ -46,6 +49,7 @@ pub fn main() !void {
     return;
 }
 
+//Preprocess the array pretty much. Pass the array as a pointer so you can mess with it
 pub fn badCharHeuristic(str: []const u8, size: u64, badchar: *[NO_OF_CHARS]u16) void {
     var i: u16 = 0;
     while (i < NO_OF_CHARS) : (i += 1) {
@@ -57,17 +61,19 @@ pub fn badCharHeuristic(str: []const u8, size: u64, badchar: *[NO_OF_CHARS]u16) 
     }
 }
 
+//Dude, this algorith still hurts my brain, heres what I can gather
+//
 pub fn search(str: []const u8, pat: []const u8, count: u32) !void {
-    const m: i64 = @intCast(pat.len);
-    const n: i64 = @intCast(str.len);
+    const patLen: i64 = @intCast(pat.len);
+    const strLen: i64 = @intCast(str.len);
 
     var badchar: [NO_OF_CHARS]u16 = undefined;
-    badCharHeuristic(pat, @intCast(m), &badchar);
+    badCharHeuristic(pat, @intCast(patLen), &badchar);
 
     var s: i64 = 0;
 
-    while (s <= (n - m)) {
-        var j: i64 = m - 1;
+    while (s <= (strLen - patLen)) {
+        var j: i64 = patLen - 1;
         var idx: i64 = @intCast(j);
         //reducing index of j of pattern while character of pattern and text are matching at this shift s
         while (idx >= 0 and pat[@intCast(idx)] == str[@as(u64, @intCast(s + idx))]) {
@@ -76,7 +82,7 @@ pub fn search(str: []const u8, pat: []const u8, count: u32) !void {
 
         if (idx < 0) {
             try stdout.writer().print("{d}:{s} \n", .{ count, str });
-            s += if (s + m < n) m - badchar[str[@as(u64, @intCast(s + m))]] else 1;
+            s += if (s + patLen < strLen) patLen - badchar[str[@as(u64, @intCast(s + patLen))]] else 1;
         } else {
             j = @intCast(idx);
             s += @intCast(@max(1, (idx) - badchar[str[@as(u64, @intCast(s + j))]]));
