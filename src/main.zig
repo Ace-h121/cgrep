@@ -35,7 +35,9 @@ pub fn main() !void {
         const pat_null_terminated: [*:0]u8 = std.os.argv[2];
         const path: [:0]const u8 = std.mem.span(path_null_terminated);
         const pat: [:0]const u8 = std.mem.span(pat_null_terminated);
-        const file = try std.fs.cwd().openFile(path, .{});
+        const file = std.fs.cwd().openFile(path, .{}) catch |err| {
+            return err;
+        };
         defer file.close();
         var bufReader = std.io.bufferedReader(file.reader());
         var inStream = bufReader.reader();
