@@ -33,7 +33,7 @@ pub fn main(init: std.process.Init) !void {
         _ = arg;
     }
 
-    parser.printFile(io, allocator, data.file, "woa") catch |err| switch (err) {
+    parser.printFile(io, allocator, data.file, "test") catch |err| switch (err) {
         error.FileNotFound => {
             try stderr.writeStreamingAll(io, "That File Does not exist, or has incorrect Permissions\n");
             std.process.exit(1);
