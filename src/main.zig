@@ -2,28 +2,42 @@ const std = @import("std");
 const mvzr = @import("mvzr");
 const parser = @import("parser");
 
-const data = struct {
-    file: []const u8,
+const stderr = std.Io.File.stderr();
+
+const ProgramData = struct {
+    file: []const u8 = "",
     regex: ?[]const u8 = null,
 };
 
 pub fn main(init: std.process.Init) !void {
+    var data: ProgramData = .{};
     const minimal = init.minimal;
-    const args = minimal.args;
-    var arena: std.heap.ArenaAllocator = .init(std.heap.page_allocator);
-    defer arena.deinit();
+    var arena = init.arena;
+
     const allocator = arena.allocator();
 
-    var argIterator = try args.iterateAllocator(allocator);
+    const io = init.io;
 
-    while (argIterator.next()) |arg| {
-        std.debug.print("{s}\n", .{arg});
+    var argIterator = try minimal.args.iterateAllocator(allocator);
+
+    //Needed to get rid of the program name arg
+    _ = argIterator.next().?;
+
+    if (argIterator.next()) |fileName| {
+        data.file = fileName;
     }
 
-    var threaded: std.Io.Threaded = .init(allocator, .{});
-    defer threaded.deinit();
-    const io = threaded.io();
+    //This will be used to go through flags and such currently doesnt do much
+    while (argIterator.next()) |arg| {
+        //        std.debug.print("{s}\n", .{arg});
+        _ = arg;
+    }
 
-    try parser.printFile(io, allocator, "test.txt", "woa");
-    std.debug.print("Test", .{});
+    parser.printFile(io, allocator, data.file, "woa") catch |err| switch (err) {
+        error.FileNotFound => {
+            try stderr.writeStreamingAll(io, "That File Does not exist, or has incorrect Permissions\n");
+            std.process.exit(1);
+        },
+        else => std.process.exit(5),
+    };
 }
