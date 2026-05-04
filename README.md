@@ -8,7 +8,7 @@ A fast, ergonomic command-line tool that combines `cat` and `grep` into a single
 
 ## Why cgrep?
 
-If you've ever typed `cat /some/long/path/to/file | grep some_pattern`, you know the friction. `cgrep` collapses that into one command and also works as a drop-in replacement for `grep` when reading from stdin.
+If you've ever typed `cat /some/long/path/to/file | grep some_pattern`, you know the friction. `cgrep` collapses that into one command and also works as a drop-in replacement for `grep` when reading from stdin, as well as a drop-in replacement for cat when just a file is passed.
 
 ---
 
