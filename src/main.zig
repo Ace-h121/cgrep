@@ -1,90 +1,165 @@
 const std = @import("std");
+const mvzr = @import("mvzr");
+const parser = @import("parser");
 
-//lord have mercy right stdout everytime I have to use it is actually hell
-const stdout = std.io.getStdOut();
-const stdin = std.io.getStdIn();
+const stderr = std.Io.File.stderr();
+const stdout = std.Io.File.stdout();
+const stdin = std.Io.File.stdin();
 
-//number of total possible characters
-const NO_OF_CHARS: u32 = 256;
+const Colors = struct {
+    red: []const u8 = "\x1b[31m",
+    black: []const u8 = "\x1b[30m",
+    green: []const u8 = "\x1b[32m",
+    brown: []const u8 = "\x1b[33m",
+    blue: []const u8 = "\x1b[34m",
+    purple: []const u8 = "\x1b[35m",
+    cyan: []const u8 = "\x1b[36m",
+    lightGray: []const u8 = "\x1b[37m",
+};
 
-pub fn main() !void {
-    //check if I have the args needed, could be cleaner and will be soon but yeah
-    if (std.os.argv.len <= 1) {
-        try std.io.getStdErr().writer().print("Error: do not have enough Args, please see help command\n", .{});
-        return;
-    }
+const ColorEnum = enum {
+    red,
+    black,
+    green,
+    brown,
+    blue,
+    purple,
+    cyan,
+    gray,
+};
 
-    //TODO: Rename this!
-    const path_null_terminated: [*:0]u8 = std.os.argv[1];
+const helpString =
+    \\Usage:
+    \\cgrep [file] [pattern] [options]
+    \\cgrep [pattern] -g [options]
+    \\
+    \\Description:
+    \\cgrep is a simple file viewer with optional pattern matching.
+    \\
+    \\• When only a file is provided, it behaves like cat and prints the entire file.
+    \\• When a pattern is provided, it behaves like grep and prints only matching lines.
+    \\
+    \\Arguments:
+    \\[file] Path to the file to read (required) (this is treated as the patter in grep mode)
+    \\[pattern] Optional regex pattern to filter output
+    \\
+    \\Optioni:
+    \\-h, --help Show this help message and exit
+    \\-c, --color Set the output color for matches or text
+    \\-g, --grep Sets cgrep to grep mode
+    \\-l --line Prints the line number the pattern is on as well
+    \\
+    \\Available Colors:
+    \\red, black, green, brown, blue, purple, cyan, gray
+    \\
+;
+const ArgsError = error{NoColor};
 
-    var count: u32 = 0;
+const colors = Colors{};
 
-    //If you are only given a pattern, read from std in
-    if (std.os.argv.len <= 2) {
-        var reader = stdin.reader();
-        const pat: [:0]const u8 = std.mem.span(path_null_terminated);
-        var buf: [1000]u8 = undefined;
-        //Print everyline that contains the pattern, pass the count so the line number is there as well
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            count += 1;
-            try search(line, pat, count);
-        }
-        // If passed both the file and pattern to match by, open the file and search for the pattern
+const ProgramData = parser.ProgramData;
+
+pub fn main(init: std.process.Init) !void {
+    var data: ProgramData = .{};
+    const minimal = init.minimal;
+    var arena = init.arena;
+
+    const allocator = arena.allocator();
+
+    const io = init.io;
+
+    var argIterator = try minimal.args.iterateAllocator(allocator);
+
+    //Needed to get rid of the program name arg
+    _ = argIterator.next().?;
+
+    if (argIterator.next()) |fileName| {
+        data.file = fileName;
     } else {
-        //TODO: Rename this too
-        const pat_null_terminated: [*:0]u8 = std.os.argv[2];
-        const path: [:0]const u8 = std.mem.span(path_null_terminated);
-        const pat: [:0]const u8 = std.mem.span(pat_null_terminated);
-        const file = std.fs.cwd().openFile(path, .{}) catch |err| {
-            return err;
-        };
-        defer file.close();
-        var bufReader = std.io.bufferedReader(file.reader());
-        var inStream = bufReader.reader();
-
-        var buf: [1024]u8 = undefined;
-        while (try inStream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            count += 1;
-            try search(line, pat, count);
-        }
+        try stderr.writeStreamingAll(io, "Please pass an arg \n");
+        std.process.exit(1);
     }
-    return;
-}
 
-//Preprocess the array pretty much. Pass the array as a pointer so you can mess with it
-pub fn badCharHeuristic(str: []const u8, size: u64, badchar: *[NO_OF_CHARS]u16) void {
-    var i: u16 = 0;
-    while (i < NO_OF_CHARS) : (i += 1) {
-        badchar[i] = 0;
-    }
-    i = 0;
-    while (i < size) : (i += 1) {
-        badchar[str[i]] = i;
-    }
-}
-
-//Dude, this algorith still hurts my brain, I used it as its the algorithm that grep uses for pattern matching. It seems to look for groups of characters in arrays, or string. Splits the string up, looks to see if the first char matches and if it does it keeps going, if not, moves on.
-pub fn search(str: []const u8, pat: []const u8, count: u32) !void {
-    const patLen: i64 = @intCast(pat.len);
-    const strLen: i64 = @intCast(str.len);
-
-    var badchar: [NO_OF_CHARS]u16 = undefined;
-    badCharHeuristic(pat, @intCast(patLen), &badchar);
-
-    var shift: i64 = 0;
-
-    while (shift <= (strLen - patLen)) {
-        var idx: i64 = patLen - 1;
-        //reducing index of pattern while character of pattern and text are matching at this shift s
-        while (idx >= 0 and pat[@intCast(idx)] == str[@as(u64, @intCast(shift + idx))]) {
-            idx -= 1;
-        }
-
-        if (idx < 0) {
-            try stdout.writer().print("{d}:{s} \n", .{ count, str });
-            shift += if (shift + patLen < strLen) patLen - badchar[str[@as(u64, @intCast(shift + patLen))]] else 1;
+    if (argIterator.next()) |pattern| {
+        if (std.mem.eql(u8, pattern, "-g") or std.mem.eql(u8, pattern, "--grep")) {
+            data.isGrepMode = true;
         } else {
-            shift += @intCast(@max(1, (idx) - badchar[str[@as(u64, @intCast(shift + idx))]]));
+            data.regex = pattern;
         }
+    }
+
+    //This will be used to go through flags and such currently doesnt do much
+    while (argIterator.next()) |arg| {
+        handleArg(arg, &data, &argIterator) catch |err| switch (err) {
+            ArgsError.NoColor => {
+                try stderr.writeStreamingAll(io, "Warning: That color is not avaliable, using default\n");
+            },
+        };
+    }
+
+    if (data.isHelpMode) {
+        try stdout.writeStreamingAll(io, helpString);
+        std.process.exit(0);
+    }
+
+    if (data.regex == null and !data.isGrepMode) {
+        parser.printFile(io, allocator, stdout, data) catch |err| switch (err) {
+            error.FileNotFound => {
+                try stderr.writeStreamingAll(io, "That File does not exist, or has incorrect Permissions\n");
+                std.process.exit(1);
+            },
+            else => std.process.exit(5),
+        };
+    } else if (data.isGrepMode) {
+        try parser.printPatternStdin(io, allocator, stdout, data, stdin);
+    } else {
+        parser.printPattern(io, allocator, stdout, data) catch |err| switch (err) {
+            error.FileNotFound => {
+                try stderr.writeStreamingAll(io, "That File does not exist, or has incorrect Permissions\n");
+                std.process.exit(1);
+            },
+            else => std.process.exit(5),
+        };
+    }
+}
+
+fn handleArg(arg: []const u8, data: *ProgramData, iterator: *std.process.Args.Iterator) !void {
+    if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+        data.*.isHelpMode = true;
+    }
+    if (std.mem.eql(u8, arg, "-c") or std.mem.eql(u8, arg, "--color")) {
+        const color = iterator.*.next();
+        data.color = try handleColorArg(color);
+    }
+
+    if (std.mem.eql(u8, arg, "-g") or std.mem.eql(u8, arg, "--grep")) {
+        data.isGrepMode = true;
+    }
+
+    if (std.mem.eql(u8, arg, "-l") or std.mem.eql(u8, arg, "--line")) {
+        data.isLineMode = true;
+    }
+}
+
+fn handleColorArg(color: ?[]const u8) ![]const u8 {
+    if (color) |c| {
+        const t = std.meta.stringToEnum(ColorEnum, c);
+
+        if (t == null) {
+            return ArgsError.NoColor;
+        }
+
+        switch (t.?) {
+            ColorEnum.red => return colors.red,
+            ColorEnum.black => return colors.black,
+            ColorEnum.blue => return colors.blue,
+            ColorEnum.brown => return colors.brown,
+            ColorEnum.cyan => return colors.cyan,
+            ColorEnum.gray => return colors.lightGray,
+            ColorEnum.green => return colors.green,
+            ColorEnum.purple => return colors.purple,
+        }
+    } else {
+        return ArgsError.NoColor;
     }
 }
