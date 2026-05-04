@@ -3,17 +3,57 @@ const Io = std.Io;
 const openFile = std.fs.openFile();
 const mzvr = @import("mvzr");
 
-pub fn printFile(io: Io, allocator: std.mem.Allocator, str: []const u8, regex: []const u8) !void {
+pub const Colors = struct {
+    red: []const u8 = "\x1b[31m",
+    nc: []const u8 = "\x1b[0m",
+};
+
+pub const color: Colors = Colors{};
+
+pub const ProgramData = struct {
+    file: []const u8 = "",
+    regex: ?[]const u8 = null,
+    color: []const u8 = color.red,
+    isHelpMode: bool = false,
+};
+
+pub fn printFile(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, data: ProgramData) !void {
     const fileBuffer = try allocator.alloc(u8, 1024 * 4);
 
-    const file = try std.Io.Dir.cwd().openFile(io, str, .{});
+    const file = try std.Io.Dir.cwd().openFile(io, data.file, .{});
     var fileReader = file.reader(io, fileBuffer);
     var reader = &fileReader.interface;
 
     while (reader.takeDelimiterInclusive('\n')) |line| {
-        const match = mzvr.match(line, regex);
-        if (match) |m| {
-            std.debug.print("{s}", .{m.slice});
+        try stdout.writeStreamingAll(io, line);
+    } else |err| switch (err) {
+        error.EndOfStream => {
+            return;
+        },
+        else => return err,
+    }
+}
+
+pub fn printPattern(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, data: ProgramData) !void {
+    const fileBuffer = try allocator.alloc(u8, 1024 * 4);
+
+    const file = try std.Io.Dir.cwd().openFile(io, data.file, .{});
+    var fileReader = file.reader(io, fileBuffer);
+    var reader = &fileReader.interface;
+
+    while (reader.takeDelimiterInclusive('\n')) |line| {
+        //this is safe because we null check to determine which function we call
+        const match = mzvr.match(line, data.regex.?);
+        if (match) |slice| {
+            const string = try std.fmt.allocPrint(allocator, "{s}{s}{s}{s}{s}", .{
+                line[0..slice.start],
+                data.color,
+                slice.slice,
+                color.nc,
+                line[slice.end..],
+            });
+
+            try stdout.writeStreamingAll(io, string);
         }
     } else |err| switch (err) {
         error.EndOfStream => {
