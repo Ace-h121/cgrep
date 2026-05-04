@@ -8,7 +8,7 @@ A fast, ergonomic command-line tool that combines `cat` and `grep` into a single
 
 ## Why cgrep?
 
-If you've ever typed `cat /some/long/path/to/file | grep some_pattern`, you know the friction. `cgrep` collapses that into one command and also works as a drop-in replacement for `grep` when reading from stdin, as well as a drop-in replacement for cat when just a file is passed.
+If you've ever typed `cat /some/long/path/to/file | grep some_pattern`, you know the friction. `cgrep` collapses that into one command and also works as a drop-in replacement for `grep` when reading from stdin, and a drop in replacement for `cat` when just a filename is passed.
 
 ---
 
@@ -33,9 +33,17 @@ cp ./zig-out/bin/cgrep ~/.local/bin/
 
 ## Usage
 
-`cgrep` has two modes — it figures out which one to use based on your arguments.
+`cgrep` has three modes — it figures out which one to use based on your arguments.
 
-### Read from a file
+### Print a file (cat mode)
+
+```sh
+cgrep /path/to/file
+```
+
+With just a file path and no pattern, `cgrep` prints the file contents — a direct replacement for `cat`.
+
+### Search a file
 
 ```sh
 cgrep /path/to/file pattern
@@ -66,6 +74,9 @@ Pass the `-g` flag (no file path) to read from stdin until EOF. This makes `cgre
 ## Examples
 
 ```sh
+# Print a file (cat mode)
+cgrep /path/to/file
+
 # Search a log file for errors
 cgrep /var/log/syslog ERROR
 
