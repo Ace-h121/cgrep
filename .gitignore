@@ -1,5 +1,2 @@
 zig-out/
-temp/
-test.txt
-zig-pkg/
 .zig-cache/
