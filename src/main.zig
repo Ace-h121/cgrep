@@ -30,7 +30,8 @@ const ColorEnum = enum {
 
 const helpString =
     \\Usage:
-    \\cgrep [pattern] [options]
+    \\cgrep [file] [pattern] [options]
+    \\cgrep [pattern] -g [options]
     \\
     \\Description:
     \\cgrep is a simple file viewer with optional pattern matching.
@@ -39,12 +40,14 @@ const helpString =
     \\• When a pattern is provided, it behaves like grep and prints only matching lines.
     \\
     \\Arguments:
-    \\Path to the file to read (required)
+    \\[file] Path to the file to read (required) (this is treated as the patter in grep mode)
     \\[pattern] Optional regex pattern to filter output
     \\
-    \\Options:
+    \\Optioni:
     \\-h, --help Show this help message and exit
     \\-c, --color Set the output color for matches or text
+    \\-g, --grep Sets cgrep to grep mode
+    \\-l --line Prints the line number the pattern is on as well
     \\
     \\Available Colors:
     \\red, black, green, brown, blue, purple, cyan, gray
@@ -131,6 +134,10 @@ fn handleArg(arg: []const u8, data: *ProgramData, iterator: *std.process.Args.It
 
     if (std.mem.eql(u8, arg, "-g") or std.mem.eql(u8, arg, "--grep")) {
         data.isGrepMode = true;
+    }
+
+    if (std.mem.eql(u8, arg, "-l") or std.mem.eql(u8, arg, "--line")) {
+        data.isLineMode = true;
     }
 }
 

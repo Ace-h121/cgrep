@@ -16,6 +16,7 @@ pub const ProgramData = struct {
     color: []const u8 = color.red,
     isHelpMode: bool = false,
     isGrepMode: bool = false,
+    isLineMode: bool = false,
 };
 
 pub fn printFile(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, data: ProgramData) !void {
@@ -42,20 +43,15 @@ pub fn printPattern(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, d
     var fileReader = file.reader(io, fileBuffer);
     var reader = &fileReader.interface;
 
+    var i: i32 = 1;
     while (reader.takeDelimiterInclusive('\n')) |line| {
         //this is safe because we null check to determine which function we call
         const match = mzvr.match(line, data.regex.?);
         if (match) |slice| {
-            const string = try std.fmt.allocPrint(allocator, "{s}{s}{s}{s}{s}", .{
-                line[0..slice.start],
-                data.color,
-                slice.slice,
-                color.nc,
-                line[slice.end..],
-            });
-
+            const string = try getFormatedString(allocator, line, slice, data, i);
             try stdout.writeStreamingAll(io, string);
         }
+        i += 1;
     } else |err| switch (err) {
         error.EndOfStream => {
             return;
@@ -71,24 +67,42 @@ pub fn printPatternStdin(io: Io, allocator: std.mem.Allocator, stdout: std.Io.Fi
     var fileReader = file.reader(io, fileBuffer);
     var reader = &fileReader.interface;
 
+    var i: i32 = 1;
     while (reader.takeDelimiterInclusive('\n')) |line| {
         //we call file here because we knew we are reading from standard in, so we treat the first param as the regex expression
         const match = mzvr.match(line, data.file);
         if (match) |slice| {
-            const string = try std.fmt.allocPrint(allocator, "{s}{s}{s}{s}{s}", .{
-                line[0..slice.start],
-                data.color,
-                slice.slice,
-                color.nc,
-                line[slice.end..],
-            });
-
+            const string = try getFormatedString(allocator, line, slice, data, i);
             try stdout.writeStreamingAll(io, string);
         }
+        i += 1;
     } else |err| switch (err) {
         error.EndOfStream => {
             return;
         },
         else => return err,
     }
+}
+
+pub fn getFormatedString(allocator: std.mem.Allocator, line: []const u8, match: mzvr.Match, data: ProgramData, lineNum: isize) ![]const u8 {
+    var string: []const u8 = undefined;
+    if (data.isLineMode) {
+        string = try std.fmt.allocPrint(allocator, "{d}: {s}{s}{s}{s}{s}", .{
+            lineNum,
+            line[0..match.start],
+            data.color,
+            match.slice,
+            color.nc,
+            line[match.end..],
+        });
+    } else {
+        string = try std.fmt.allocPrint(allocator, "{s}{s}{s}{s}{s}", .{
+            line[0..match.start],
+            data.color,
+            match.slice,
+            color.nc,
+            line[match.end..],
+        });
+    }
+    return string;
 }
