@@ -4,6 +4,7 @@ const parser = @import("parser");
 
 const stderr = std.Io.File.stderr();
 const stdout = std.Io.File.stdout();
+const stdin = std.Io.File.stdin();
 
 const Colors = struct {
     red: []const u8 = "\x1b[31m",
@@ -27,6 +28,28 @@ const ColorEnum = enum {
     gray,
 };
 
+const helpString =
+    \\Usage:
+    \\cgrep [pattern] [options]
+    \\
+    \\Description:
+    \\cgrep is a simple file viewer with optional pattern matching.
+    \\
+    \\• When only a file is provided, it behaves like cat and prints the entire file.
+    \\• When a pattern is provided, it behaves like grep and prints only matching lines.
+    \\
+    \\Arguments:
+    \\Path to the file to read (required)
+    \\[pattern] Optional regex pattern to filter output
+    \\
+    \\Options:
+    \\-h, --help Show this help message and exit
+    \\-c, --color Set the output color for matches or text
+    \\
+    \\Available Colors:
+    \\red, black, green, brown, blue, purple, cyan, gray
+    \\
+;
 const ArgsError = error{NoColor};
 
 const colors = Colors{};
@@ -50,12 +73,16 @@ pub fn main(init: std.process.Init) !void {
     if (argIterator.next()) |fileName| {
         data.file = fileName;
     } else {
-        try stderr.writeStreamingAll(io, "Please pass a file name\n");
+        try stderr.writeStreamingAll(io, "Please pass an arg \n");
         std.process.exit(1);
     }
 
     if (argIterator.next()) |pattern| {
-        data.regex = pattern;
+        if (std.mem.eql(u8, pattern, "-g") or std.mem.eql(u8, pattern, "--grep")) {
+            data.isGrepMode = true;
+        } else {
+            data.regex = pattern;
+        }
     }
 
     //This will be used to go through flags and such currently doesnt do much
@@ -68,11 +95,11 @@ pub fn main(init: std.process.Init) !void {
     }
 
     if (data.isHelpMode) {
-        try stdout.writeStreamingAll(io, "test help message");
+        try stdout.writeStreamingAll(io, helpString);
         std.process.exit(0);
     }
 
-    if (data.regex == null) {
+    if (data.regex == null and !data.isGrepMode) {
         parser.printFile(io, allocator, stdout, data) catch |err| switch (err) {
             error.FileNotFound => {
                 try stderr.writeStreamingAll(io, "That File does not exist, or has incorrect Permissions\n");
@@ -80,6 +107,8 @@ pub fn main(init: std.process.Init) !void {
             },
             else => std.process.exit(5),
         };
+    } else if (data.isGrepMode) {
+        try parser.printPatternStdin(io, allocator, stdout, data, stdin);
     } else {
         parser.printPattern(io, allocator, stdout, data) catch |err| switch (err) {
             error.FileNotFound => {
@@ -98,6 +127,10 @@ fn handleArg(arg: []const u8, data: *ProgramData, iterator: *std.process.Args.It
     if (std.mem.eql(u8, arg, "-c") or std.mem.eql(u8, arg, "--color")) {
         const color = iterator.*.next();
         data.color = try handleColorArg(color);
+    }
+
+    if (std.mem.eql(u8, arg, "-g") or std.mem.eql(u8, arg, "--grep")) {
+        data.isGrepMode = true;
     }
 }
 

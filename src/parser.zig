@@ -15,6 +15,7 @@ pub const ProgramData = struct {
     regex: ?[]const u8 = null,
     color: []const u8 = color.red,
     isHelpMode: bool = false,
+    isGrepMode: bool = false,
 };
 
 pub fn printFile(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, data: ProgramData) !void {
@@ -44,6 +45,35 @@ pub fn printPattern(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, d
     while (reader.takeDelimiterInclusive('\n')) |line| {
         //this is safe because we null check to determine which function we call
         const match = mzvr.match(line, data.regex.?);
+        if (match) |slice| {
+            const string = try std.fmt.allocPrint(allocator, "{s}{s}{s}{s}{s}", .{
+                line[0..slice.start],
+                data.color,
+                slice.slice,
+                color.nc,
+                line[slice.end..],
+            });
+
+            try stdout.writeStreamingAll(io, string);
+        }
+    } else |err| switch (err) {
+        error.EndOfStream => {
+            return;
+        },
+        else => return err,
+    }
+}
+
+pub fn printPatternStdin(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, data: ProgramData, stdin: std.Io.File) !void {
+    const fileBuffer = try allocator.alloc(u8, 1024 * 4);
+
+    const file = stdin;
+    var fileReader = file.reader(io, fileBuffer);
+    var reader = &fileReader.interface;
+
+    while (reader.takeDelimiterInclusive('\n')) |line| {
+        //we call file here because we knew we are reading from standard in, so we treat the first param as the regex expression
+        const match = mzvr.match(line, data.file);
         if (match) |slice| {
             const string = try std.fmt.allocPrint(allocator, "{s}{s}{s}{s}{s}", .{
                 line[0..slice.start],
