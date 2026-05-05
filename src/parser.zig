@@ -41,23 +41,9 @@ pub fn printPattern(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, d
 
     const file = try std.Io.Dir.cwd().openFile(io, data.file, .{});
     var fileReader = file.reader(io, fileBuffer);
-    var reader = &fileReader.interface;
 
-    var i: i32 = 1;
-    while (reader.takeDelimiterInclusive('\n')) |line| {
-        //this is safe because we null check to determine which function we call
-        const match = mzvr.match(line, data.regex.?);
-        if (match) |slice| {
-            const string = try getFormatedString(allocator, line, slice, data, i);
-            try stdout.writeStreamingAll(io, string);
-        }
-        i += 1;
-    } else |err| switch (err) {
-        error.EndOfStream => {
-            return;
-        },
-        else => return err,
-    }
+    try printMatches(&fileReader, allocator, io, data, stdout);
+
 }
 
 pub fn printPatternStdin(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, data: ProgramData, stdin: std.Io.File) !void {
@@ -65,23 +51,9 @@ pub fn printPatternStdin(io: Io, allocator: std.mem.Allocator, stdout: std.Io.Fi
 
     const file = stdin;
     var fileReader = file.reader(io, fileBuffer);
-    var reader = &fileReader.interface;
 
-    var i: i32 = 1;
-    while (reader.takeDelimiterInclusive('\n')) |line| {
-        //we call file here because we knew we are reading from standard in, so we treat the first param as the regex expression
-        const match = mzvr.match(line, data.file);
-        if (match) |slice| {
-            const string = try getFormatedString(allocator, line, slice, data, i);
-            try stdout.writeStreamingAll(io, string);
-        }
-        i += 1;
-    } else |err| switch (err) {
-        error.EndOfStream => {
-            return;
-        },
-        else => return err,
-    }
+    
+    try printMatches(&fileReader, allocator, io, data, stdout);
 }
 
 pub fn getFormatedString(allocator: std.mem.Allocator, line: []const u8, match: mzvr.Match, data: ProgramData, lineNum: isize) ![]const u8 {
@@ -105,4 +77,30 @@ pub fn getFormatedString(allocator: std.mem.Allocator, line: []const u8, match: 
         });
     }
     return string;
+}
+
+//we know the null accesses are safe due to checks in the main file
+fn printMatches(fileReader: *Io.File.Reader, allocator: std.mem.Allocator, io: Io, data: ProgramData, stdout:std.Io.File) !void {
+    var pattern: []const u8 = undefined;
+    if(data.isGrepMode){
+        pattern=data.file;
+    } else {
+        pattern=data.regex.?;
+    }
+    var reader = &fileReader.interface;
+    var i: i32 = 1;
+    while (reader.takeDelimiterInclusive('\n')) |line| {
+        const match = mzvr.match(line, pattern);
+        if (match) |slice| {
+            const string = try getFormatedString(allocator, line, slice, data, i);
+            try stdout.writeStreamingAll(io, string);
+        }
+        i += 1;
+    } else |err| switch (err) {
+        error.EndOfStream => {
+            return;
+        },
+        else => return err,
+    }
+
 }
