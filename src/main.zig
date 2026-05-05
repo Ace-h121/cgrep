@@ -29,29 +29,21 @@ const ColorEnum = enum {
 };
 
 const helpString =
-    \\Usage:
-    \\cgrep [file] [pattern] [options]
-    \\cgrep [pattern] -g [options]
-    \\
-    \\Description:
-    \\cgrep is a simple file viewer with optional pattern matching.
-    \\
-    \\• When only a file is provided, it behaves like cat and prints the entire file.
-    \\• When a pattern is provided, it behaves like grep and prints only matching lines.
-    \\
-    \\Arguments:
-    \\[file] Path to the file to read (required) (this is treated as the patter in grep mode)
-    \\[pattern] Optional regex pattern to filter output
-    \\
-    \\Optioni:
-    \\-h, --help Show this help message and exit
-    \\-c, --color Set the output color for matches or text
-    \\-g, --grep Sets cgrep to grep mode
-    \\-l --line Prints the line number the pattern is on as well
-    \\
-    \\Available Colors:
-    \\red, black, green, brown, blue, purple, cyan, gray
-    \\
+\\Usage: cgrep <file> [pattern] [flags]
+\\       cgrep <pattern> -g [flags]
+
+\\Modes:
+\\  cgrep <file>             Print file contents (cat mode)
+\\  cgrep <file> <pattern>   Search file for pattern
+\\  cgrep <pattern> -g       Search stdin for pattern
+\\
+\\Flags:
+\\  -g          Read from stdin
+\\  -l          Print line numbers alongside matches
+\\  -c <color>  Set a custom color for matched output
+
+\\Colors:
+\\  red, black, green, brown, blue, purple, cyan, gray
 ;
 const ArgsError = error{NoColor};
 
