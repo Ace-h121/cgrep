@@ -43,7 +43,6 @@ pub fn printPattern(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, d
     var fileReader = file.reader(io, fileBuffer);
 
     try printMatches(&fileReader, allocator, io, data, stdout);
-
 }
 
 pub fn printPatternStdin(io: Io, allocator: std.mem.Allocator, stdout: std.Io.File, data: ProgramData, stdin: std.Io.File) !void {
@@ -52,7 +51,6 @@ pub fn printPatternStdin(io: Io, allocator: std.mem.Allocator, stdout: std.Io.Fi
     const file = stdin;
     var fileReader = file.reader(io, fileBuffer);
 
-    
     try printMatches(&fileReader, allocator, io, data, stdout);
 }
 
@@ -80,13 +78,14 @@ pub fn getFormatedString(allocator: std.mem.Allocator, line: []const u8, match: 
 }
 
 //we know the null accesses are safe due to checks in the main file
-fn printMatches(fileReader: *Io.File.Reader, allocator: std.mem.Allocator, io: Io, data: ProgramData, stdout:std.Io.File) !void {
+fn printMatches(fileReader: *Io.File.Reader, allocator: std.mem.Allocator, io: Io, data: ProgramData, stdout: std.Io.File) !void {
     var pattern: []const u8 = undefined;
-    if(data.isGrepMode){
-        pattern=data.file;
+    if (data.isGrepMode) {
+        pattern = data.file;
     } else {
-        pattern=data.regex.?;
+        pattern = data.regex.?;
     }
+
     var reader = &fileReader.interface;
     var i: i32 = 1;
     while (reader.takeDelimiterInclusive('\n')) |line| {
@@ -102,5 +101,4 @@ fn printMatches(fileReader: *Io.File.Reader, allocator: std.mem.Allocator, io: I
         },
         else => return err,
     }
-
 }
