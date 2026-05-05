@@ -44,6 +44,7 @@ const helpString =
 
 \\Colors:
 \\  red, black, green, brown, blue, purple, cyan, gray
+\\
 ;
 const ArgsError = error{NoColor};
 
