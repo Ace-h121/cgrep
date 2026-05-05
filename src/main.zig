@@ -74,6 +74,9 @@ pub fn main(init: std.process.Init) !void {
     _ = argIterator.next().?;
 
     if (argIterator.next()) |fileName| {
+        if (std.mem.eql(u8, fileName, "-h") or std.mem.eql(u8, fileName, "--help")){
+            data.isHelpMode = true;
+        }
         data.file = fileName;
     } else {
         try stderr.writeStreamingAll(io, "Please pass an arg \n");
