@@ -79,12 +79,7 @@ pub fn getFormatedString(allocator: std.mem.Allocator, line: []const u8, match: 
 
 //we know the null accesses are safe due to checks in the main file
 fn printMatches(fileReader: *Io.File.Reader, allocator: std.mem.Allocator, io: Io, data: ProgramData, stdout: std.Io.File) !void {
-    var pattern: []const u8 = undefined;
-    if (data.isGrepMode) {
-        pattern = data.file;
-    } else {
-        pattern = data.regex.?;
-    }
+    const pattern = if (data.isGrepMode) data.file else data.regex.?;
 
     var reader = &fileReader.interface;
     var i: i32 = 1;
