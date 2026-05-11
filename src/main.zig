@@ -159,3 +159,19 @@ fn handleColorArg(color: ?[]const u8) ![]const u8 {
         return ArgsError.NoColor;
     }
 }
+
+test "handleColorArg - valid colors" {
+    try std.testing.expectEqualStrings("\x1b[31m", try handleColorArg("red"));
+    try std.testing.expectEqualStrings("\x1b[32m", try handleColorArg("green"));
+    try std.testing.expectEqualStrings("\x1b[34m", try handleColorArg("blue"));
+    try std.testing.expectEqualStrings("\x1b[33m", try handleColorArg("brown"));
+    try std.testing.expectEqualStrings("\x1b[35m", try handleColorArg("purple"));
+    try std.testing.expectEqualStrings("\x1b[36m", try handleColorArg("cyan"));
+    try std.testing.expectEqualStrings("\x1b[37m", try handleColorArg("gray"));
+    try std.testing.expectEqualStrings("\x1b[30m", try handleColorArg("black"));
+}
+
+test "handleColorArg - invalid color returns error" {
+    try std.testing.expectError(error.NoColor, handleColorArg("invalid"));
+    try std.testing.expectError(error.NoColor, handleColorArg(null));
+}

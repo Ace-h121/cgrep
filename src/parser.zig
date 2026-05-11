@@ -97,3 +97,55 @@ fn printMatches(fileReader: *Io.File.Reader, allocator: std.mem.Allocator, io: I
         else => return err,
     }
 }
+
+test "getFormatedString without line numbers" {
+    const allocator = std.testing.allocator;
+    const data = ProgramData{};
+    const line = "hello world";
+    const match = (mzvr.match(line, "world") orelse return error.TestFailed);
+    const result = try getFormatedString(allocator, line, match, data, 0);
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("hello \x1b[31mworld\x1b[0m", result);
+}
+
+test "getFormatedString with line numbers" {
+    const allocator = std.testing.allocator;
+    var data = ProgramData{};
+    data.isLineMode = true;
+    const line = "hello world";
+    const match = (mzvr.match(line, "world") orelse return error.TestFailed);
+    const result = try getFormatedString(allocator, line, match, data, 42);
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("42: hello \x1b[31mworld\x1b[0m", result);
+}
+
+test "getFormatedString with custom color" {
+    const allocator = std.testing.allocator;
+    var data = ProgramData{};
+    data.color = "\x1b[32m";
+    const line = "foo bar baz";
+    const match = (mzvr.match(line, "bar") orelse return error.TestFailed);
+    const result = try getFormatedString(allocator, line, match, data, 0);
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("foo \x1b[32mbar\x1b[0m baz", result);
+}
+
+test "getFormatedString with match at start of line" {
+    const allocator = std.testing.allocator;
+    const data = ProgramData{};
+    const line = "hello world";
+    const match = (mzvr.match(line, "^hello") orelse return error.TestFailed);
+    const result = try getFormatedString(allocator, line, match, data, 0);
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("\x1b[31mhello\x1b[0m world", result);
+}
+
+test "getFormatedString with full line match" {
+    const allocator = std.testing.allocator;
+    const data = ProgramData{};
+    const line = "hello";
+    const match = (mzvr.match(line, "^hello$") orelse return error.TestFailed);
+    const result = try getFormatedString(allocator, line, match, data, 0);
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("\x1b[31mhello\x1b[0m", result);
+}
