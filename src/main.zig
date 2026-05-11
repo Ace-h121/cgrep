@@ -29,22 +29,20 @@ const ColorEnum = enum {
 };
 
 const helpString =
-\\Usage: cgrep <file> [pattern] [flags]
-\\       cgrep <pattern> -g [flags]
-
-\\Modes:
-\\  cgrep <file>             Print file contents (cat mode)
-\\  cgrep <file> <pattern>   Search file for pattern
-\\  cgrep <pattern> -g       Search stdin for pattern
-\\
-\\Flags:
-\\  -g          Read from stdin
-\\  -l          Print line numbers alongside matches
-\\  -c <color>  Set a custom color for matched output
-
-\\Colors:
-\\  red, black, green, brown, blue, purple, cyan, gray
-\\
+    \\Usage: cgrep <file> [pattern] [flags]
+    \\       cgrep <pattern> -g [flags]
+    \\Modes:
+    \\  cgrep <file>             Print file contents (cat mode)
+    \\  cgrep <file> <pattern>   Search file for pattern
+    \\  cgrep <pattern> -g       Search stdin for pattern
+    \\
+    \\Flags:
+    \\  -g          Read from stdin
+    \\  -l          Print line numbers alongside matches
+    \\  -c <color>  Set a custom color for matched output
+    \\Colors:
+    \\  red, black, green, brown, blue, purple, cyan, gray
+    \\
 ;
 const ArgsError = error{NoColor};
 
@@ -67,7 +65,7 @@ pub fn main(init: std.process.Init) !void {
     _ = argIterator.next().?;
 
     if (argIterator.next()) |fileName| {
-        if (std.mem.eql(u8, fileName, "-h") or std.mem.eql(u8, fileName, "--help")){
+        if (std.mem.eql(u8, fileName, "-h") or std.mem.eql(u8, fileName, "--help")) {
             data.isHelpMode = true;
         }
         data.file = fileName;

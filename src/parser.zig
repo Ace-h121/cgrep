@@ -81,6 +81,9 @@ pub fn getFormatedString(allocator: std.mem.Allocator, line: []const u8, match: 
 fn printMatches(fileReader: *Io.File.Reader, allocator: std.mem.Allocator, io: Io, data: ProgramData, stdout: std.Io.File) !void {
     const pattern = if (data.isGrepMode) data.file else data.regex.?;
 
+    // Empty pattern would panic in mvzr - skip processing
+    if (pattern.len == 0) return;
+
     var reader = &fileReader.interface;
     var i: i32 = 1;
     while (reader.takeDelimiterInclusive('\n')) |line| {
