@@ -14,7 +14,7 @@ const Colors = struct {
     blue: []const u8 = "\x1b[34m",
     purple: []const u8 = "\x1b[35m",
     cyan: []const u8 = "\x1b[36m",
-    lightGray: []const u8 = "\x1b[37m",
+    lightGray: []const u8 = "\x1b[37m", // Gray color maps to this ANSI code
 };
 
 const ColorEnum = enum {
@@ -43,7 +43,7 @@ const helpString =
     \\Colors:
     \\  red, black, green, brown, blue, purple, cyan, gray
     \\
-;
+    ;
 const ArgsError = error{NoColor};
 
 const colors = Colors{};
@@ -61,7 +61,7 @@ pub fn main(init: std.process.Init) !void {
 
     var argIterator = try minimal.args.iterateAllocator(allocator);
 
-    //Needed to get rid of the program name arg
+    // Discard program name from args
     _ = argIterator.next().?;
 
     if (argIterator.next()) |fileName| {
@@ -70,7 +70,7 @@ pub fn main(init: std.process.Init) !void {
         }
         data.file = fileName;
     } else {
-        try stderr.writeStreamingAll(io, "Please pass an arg \n");
+        try stderr.writeStreamingAll(io, "Error: No arguments provided\n");
         std.process.exit(1);
     }
 
@@ -82,11 +82,12 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    //This will be used to go through flags and such currently doesnt do much
+    //Used to actually sort through and find args
+    // Process all remaining arguments
     while (argIterator.next()) |arg| {
         handleArg(arg, &data, &argIterator) catch |err| switch (err) {
             ArgsError.NoColor => {
-                try stderr.writeStreamingAll(io, "Warning: That color is not avaliable, using default\n");
+                try stderr.writeStreamingAll(io, "Warning: Unknown color, using default\n");
             },
         };
     }
@@ -99,7 +100,7 @@ pub fn main(init: std.process.Init) !void {
     if (data.regex == null and !data.isGrepMode) {
         parser.printFile(io, allocator, stdout, data) catch |err| switch (err) {
             error.FileNotFound => {
-                try stderr.writeStreamingAll(io, "That File does not exist, or has incorrect Permissions\n");
+                try stderr.writeStreamingAll(io, "Error: File not found or permission denied\n");
                 std.process.exit(1);
             },
             else => std.process.exit(5),
@@ -109,7 +110,7 @@ pub fn main(init: std.process.Init) !void {
     } else {
         parser.printPattern(io, allocator, stdout, data) catch |err| switch (err) {
             error.FileNotFound => {
-                try stderr.writeStreamingAll(io, "That File does not exist, or has incorrect Permissions\n");
+                try stderr.writeStreamingAll(io, "Error: File not found or permission denied\n");
                 std.process.exit(1);
             },
             else => std.process.exit(5),
@@ -149,7 +150,7 @@ fn handleColorArg(color: ?[]const u8) ![]const u8 {
             ColorEnum.blue => return colors.blue,
             ColorEnum.brown => return colors.brown,
             ColorEnum.cyan => return colors.cyan,
-            ColorEnum.gray => return colors.lightGray,
+            ColorEnum.gray => return colors.lightGray, // Gray maps to lightGray as they're the same color
             ColorEnum.green => return colors.green,
             ColorEnum.purple => return colors.purple,
         }
